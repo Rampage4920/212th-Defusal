@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>4‑Wire Combo → Defusal (Single File, Game Only)</title>
+  <title>4-Wire Combo → Defusal (Single File, Game Only)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     * { box-sizing: border-box; }
@@ -10,36 +10,65 @@
     .container { max-width: 980px; margin: 0 auto; padding: 24px; }
     h1 { margin: 0 0 6px; }
     .hint { color:#aaa; margin: 0 0 14px; }
-    .controls { display:grid; grid-template-columns: repeat(4, minmax(160px,1fr)) auto; gap:10px; padding:12px; background:#161616; border:1px solid #262626; border-radius:12px; align-items:end; }
+
+    .controls {
+      display:grid;
+      grid-template-columns: repeat(4, minmax(160px,1fr)) auto;
+      gap:10px;
+      padding:12px;
+      background:#161616;
+      border:1px solid #262626;
+      border-radius:12px;
+      align-items:end;
+    }
     .slot { display:flex; flex-direction:column; gap:6px; }
     select { padding:8px; border-radius:8px; border:1px solid #333; background:#1f1f1f; color:#eee; }
     button { padding:10px 14px; border-radius:10px; background:#222; border:1px solid #333; color:#eee; cursor:pointer; }
+
     .metaRow { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:10px; color:#aaa; }
     .badge { display:inline-block; padding:2px 8px; border:1px solid #333; background:#1f1f1f; border-radius:999px; }
+
     .results { margin-top:14px; display:grid; gap:8px; }
     .listHead, .card {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) max-content; /* left grows, right fits content */
-  align-items: center;
-  gap: 4px;                 /* smaller gap between combo and defusal */
-  padding: 8px 12px;
-  border-radius: 10px;
-}
+      display:grid;
+      grid-template-columns: minmax(0, 1fr) max-content; /* left grows, right hugs */
+      align-items:center;
+      gap:2px; /* tighter gap between combo and defusal */
+      padding:8px 12px;
+      border-radius:10px;
+    }
     .listHead { color:#bbb; }
     .card { background:#161616; border:1px solid #262626; }
+
     .combo {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  display: inline-flex;
-  flex-wrap: nowrap;        /* no wrapping between chips */
-  gap: 4px;                 /* slightly tighter chip spacing */
-  white-space: nowrap;      /* keep the entire combo on one line */
-}
-    .chip { padding:2px 8px; border-radius:999px; border:1px solid #333; background:#1f1f1f; }
-    .out { color:#cde3ff; white-space:nowrap; }
-    .panel { margin-top: 14px; padding: 10px 12px; background:#101010; border:1px solid #2a2a2a; border-radius:12px; }
-    .panel strong { margin-right: 6px; }
-    /* Small tweak to bring the two columns closer together */
-    .listHead, .card { gap: 8px; }
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      display:inline-flex;
+      flex-wrap:nowrap;   /* keep whole combo on one line */
+      gap:4px;
+      white-space:nowrap;
+    }
+    .chip {
+      padding:2px 8px;
+      border-radius:999px;
+      border:1px solid #333;
+      background:#1f1f1f;
+    }
+
+    .out {
+      display:inline-flex; /* coloured defusal chips */
+      flex-wrap:nowrap;
+      gap:4px;
+      white-space:nowrap;
+    }
+
+    .panel {
+      margin-top:14px;
+      padding:10px 12px;
+      background:#101010;
+      border:1px solid #2a2a2a;
+      border-radius:12px;
+    }
+    .panel strong { margin-right:6px; }
   </style>
 
   <!-- BEGIN COMBO DATA (one per line, exactly four colours, left→right) -->
@@ -119,8 +148,8 @@ Purple, Yellow, Red
 </head>
 <body>
   <main class="container">
-    <h1>4‑Wire Combo → Defusal</h1>
-    <p class="hint">For Garry’s Mod gameplay only — not for real‑world use.</p>
+    <h1>4-Wire Combo → Defusal</h1>
+    <p class="hint">For Garry’s Mod gameplay only — not for real-world use.</p>
 
     <section class="controls">
       <div class="slot"><label>Wire 1</label><select id="w1"></select></div>
@@ -164,7 +193,7 @@ Purple, Yellow, Red
     const norm = s => (s||"").trim().toLowerCase();
     const titleCase = s => s.replace(/\w\S*/g, t => t[0].toUpperCase() + t.slice(1).toLowerCase());
 
-    // Color mapping for wire text
+    // Wire colour mapping
     const COLOR_MAP = {
       "red":"#ff4b4b",
       "blue":"#3ea0ff",
@@ -182,7 +211,7 @@ Purple, Yellow, Red
     };
 
     let combos = [];   // [[c1,c2,c3,c4], ...]
-    let outputs = [];  // ["string", ...]
+    let outputs = [];  // ["CSV string", ...]
     let palette = [...BASE_PALETTE];
 
     function parseCombos(text) {
@@ -260,11 +289,23 @@ Purple, Yellow, Red
       return span;
     }
 
+    function chipsFromCsv(text) {
+      const out = [];
+      const raw = (text || "").trim();
+      if (!raw) return out;
+      for (const part of raw.split(",")) {
+        const t = part.trim();
+        if (!t) continue;
+        out.push(colorSpan(t));
+      }
+      return out;
+    }
+
     function render() {
       const sel = getSelections();
       const idxs = filteredIndexes(sel);
 
-      // Deduplicate by combo (normalize key)
+      // Deduplicate results by normalized 4-wire combo
       const seen = new Set();
       const unique = [];
       for (const i of idxs) {
@@ -279,7 +320,7 @@ Purple, Yellow, Red
       rowsWrap.innerHTML = "";
       exactPanel.style.display = "none";
 
-      // Status about alignment
+      // Data alignment status
       if (outputs.length === combos.length) {
         statusEl.className = "badge";
         statusEl.style.color = "#9ff3aa";
@@ -300,17 +341,21 @@ Purple, Yellow, Red
 
         const right = document.createElement("div");
         right.className = "out";
-        right.textContent = outputs[i] ?? "(no output)";
+        const chips = chipsFromCsv(outputs[i] ?? "");
+        if (chips.length === 0) {
+          right.textContent = "(no output)";
+        } else {
+          for (const el of chips) right.appendChild(el);
+        }
 
         card.appendChild(left);
         card.appendChild(right);
         rowsWrap.appendChild(card);
       }
 
-      // Exact-match emphasis if all 4 selected
+      // Exact-match emphasis when all 4 are chosen
       const allChosen = sel.every(Boolean);
       if (allChosen) {
-        // Find the first exact index among idxs
         let exactIdx = -1;
         for (const i of idxs) {
           const row = combos[i];
@@ -319,7 +364,13 @@ Purple, Yellow, Red
         if (exactIdx !== -1) {
           exactCombo.innerHTML = "";
           for (const token of combos[exactIdx]) exactCombo.appendChild(colorSpan(token));
-          exactOutput.textContent = outputs[exactIdx] ?? "(no output)";
+          exactOutput.innerHTML = "";
+          const exactChips = chipsFromCsv(outputs[exactIdx] ?? "");
+          if (exactChips.length === 0) {
+            exactOutput.textContent = "(no output)";
+          } else {
+            for (const el of exactChips) exactOutput.appendChild(el);
+          }
           exactPanel.style.display = "block";
         }
       }
