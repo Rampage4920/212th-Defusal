@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Joe Bombs – Wire Filter (Game Only)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link href="styles.css" rel="stylesheet" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>Wire Filter (Left → Right)</h1>
+      <p class="hint">For Garry’s Mod (Joe Bombs) gameplay only — not real-world use.</p>
+
+      <section class="controls">
+        <div class="slot">
+          <label>First wire</label>
+          <select id="c1"></select>
+        </div>
+        <div class="slot">
+          <label>Second wire</label>
+          <select id="c2"></select>
+        </div>
+        <label class="tog"><input id="left" type="checkbox" checked /> Left-anchored</label>
+        <label class="tog"><input id="exact" type="checkbox" /> Exact length</label>
+      </section>
+
+      <section id="results" class="results"></section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
