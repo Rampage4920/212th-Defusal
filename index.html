@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>4-Wire Combo → Defusal (Single File, Game Only)</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>212th Bomb Defusal Tool</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.5" />
   <style>
     * { box-sizing: border-box; }
     body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:#0b0b0b; color:#eee; }
@@ -74,82 +74,52 @@
   <!-- BEGIN COMBO DATA (one per line, exactly four colours, left→right) -->
   <script id="combos" type="text/plain">
 # Replace with your combos in order (left → right)
-Black, Brown, White, Green
-Black, Brown, White, Green
-Blue, Green, Purple, Pink
-Blue, Green, Purple, Pink
+Red, Purple, Yellow, Grey
+Red, Purple, Black, Yellow
+Orange, Pink, Green, Grey
+Yellow, Orange, Blue, Yellow
+Green, Orange, Black, Yellow
+Green, Yellow, Red, White
+Green, Yellow, Orange, Blue
+Green, Yellow, Yellow, Black
+Blue, Yellow, Grey, Red
 Blue, Green, Yellow, Red
-Blue, Green, Yellow, Red
+Blue, Green, Purple, Pink
 Blue, White, Red, Black
-Blue, Yellow, Grey, Red
-Blue, Yellow, Grey, Red
-Brown, Orange, Yellow, White
-Brown, Orange, Yellow, White
-Green, Orange, Black, Yellow
-Green, Orange, Black, Yellow
-Green, Yellow, Orange, Blue
-Green, Yellow, Orange, Blue
-Green, Yellow, Red, White
-Green, Yellow, Red, White
-Green, Yellow, Yellow, Black
-Green, Yellow, Yellow, Black
-Grey, White, Blue, Black
-Grey, White, Blue, Black
-Orange, Pink, Green, Grey
-Orange, Pink, Green, Grey
 Purple, Red, Pink, White
-Purple, Red, Pink, White
-Red, Purple, Black, Yellow
-Red, Purple, Black, Yellow
-Red, Purple, Yellow, Grey
-Red, Purple, Yellow, Grey
+Brown, Orange, Yellow, White
+Grey, White, Blue, Black
 White, Blue, Red, Black
-Yellow, Orange, Blue, Yellow
-Yellow, Orange, Blue, Yellow
+Black, Brown, White, Green
   </script>
   <!-- END COMBO DATA -->
 
   <!-- BEGIN OUTPUT DATA (one per line; line N maps to combo line N) -->
   <script id="outputs" type="text/plain">
-Brown, Black
-Brown, Black
-Green, Blue
-Green, Blue
-Red, Blue
-Red, Blue
-Blue
-Yellow, Blue
-Yellow, Blue
-Orange, White
-Orange, White
-Green, Black, Yellow
-Green, Black, Yellow
-Green, Yellow
-Green, Yellow
-Red
-Red
-Left Yellow, Black
-Left Yellow, Black
-White, Black
-White, Black
-Pink, Grey
-Pink, Grey
-Red, Pink
-Red, Pink
-Purple, Red
-Purple, Red
 Purple, Yellow, Red
-Purple, Yellow, Red
+Purple, Red
+Pink, Grey
+Orange, Blue
+Green, Black, Yellow
+Red
+Green, Yellow
+Left Yellow, Black
+Yellow, Blue
+Red, Blue
+Green, Blue
 Blue
-Orange, Blue
-Orange, Blue
+Red, Pink
+Orange, White
+White, Black
+Blue
+Brown, Black
   </script>
   <!-- END OUTPUT DATA -->
 </head>
 <body>
   <main class="container">
     <h1>212th Bomb Defusal Tool</h1>
-    <p class="hint">To Streamline Bomb Defusals</p>
+    <p class="hint">Read the Wires from Left to Right Horizontally</p>
 
     <section class="controls">
       <div class="slot"><label>Wire 1</label><select id="w1"></select></div>
