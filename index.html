@@ -69,6 +69,24 @@
       border-radius:12px;
     }
     .panel strong { margin-right:6px; }
+/* Dynamic zoom for results */
+:root { --results-zoom: 1; }
+.resultsZoom {
+  transform: scale(var(--results-zoom));
+  transform-origin: top left;
+  width: calc(100% / var(--results-zoom)); /* keep layout width the same */
+}
+
+/* Slow fading green background when exactly one match remains */
+@keyframes bgPulse {
+  0%   { background-color: #0b0b0b; }
+  50%  { background-color: #102b10; } /* subtle green tint */
+  100% { background-color: #0b0b0b; }
+}
+body.success-flash {
+  animation: bgPulse 2.5s ease-in-out infinite;
+}
+
   </style>
 
   <!-- BEGIN COMBO DATA (one per line, exactly four colours, left→right) -->
@@ -134,7 +152,7 @@ Brown, Black
       <div id="status" class="badge"></div>
     </div>
 
-    <div class="results">
+    <div class="results resultsZoom" id="resultsZoom">
       <div class="listHead">
         <div>Wire Combo</div>
         <div>Defusal</div>
@@ -159,6 +177,8 @@ Brown, Black
     const exactPanel = document.getElementById("exactPanel");
     const exactCombo = document.getElementById("exactCombo");
     const exactOutput = document.getElementById("exactOutput");
+    const resultsZoomEl = document.getElementById("resultsZoom");
+
 
     const norm = s => (s||"").trim().toLowerCase();
     const titleCase = s => s.replace(/\w\S*/g, t => t[0].toUpperCase() + t.slice(1).toLowerCase());
@@ -285,7 +305,18 @@ Brown, Black
           unique.push(i);
         }
       }
+// --- Dynamic zoom based on how many matches remain ---
+const pivot = 12;        // start zooming when <= 12 matches
+const maxZoom = 1.4;     // 140% when only one left
+let z = 1;
+if (unique.length <= pivot) {
+  z = 1 + (pivot - unique.length) * ((maxZoom - 1) / pivot);
+}
+z = Math.min(maxZoom, Math.max(1, z));
+document.documentElement.style.setProperty('--results-zoom', z.toFixed(2));
 
+// --- Background pulse when exactly one match remains ---
+document.body.classList.toggle('success-flash', unique.length === 1);
       countEl.textContent = `${unique.length} match${unique.length === 1 ? "" : "es"}`;
       rowsWrap.innerHTML = "";
       exactPanel.style.display = "none";
