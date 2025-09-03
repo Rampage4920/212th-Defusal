@@ -39,7 +39,15 @@
     }
     .listHead { color:#bbb; }
     .card { background:#161616; border:1px solid #262626; }
-
+/* Slow green pulse for the single remaining result card only */
+@keyframes cardPulse {
+  0%   { background-color: #161616; }  /* your card base */
+  50%  { background-color: #1e3a1e; }  /* subtle green tint */
+  100% { background-color: #161616; }
+}
+.card.pulse {
+  animation: cardPulse 2.5s ease-in-out infinite;
+}
     .combo {
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
       display:inline-flex;
@@ -76,17 +84,6 @@
   transform-origin: top left;
   width: calc(100% / var(--results-zoom)); /* keep layout width the same */
 }
-
-/* Slow fading green background when exactly one match remains */
-@keyframes bgPulse {
-  0%   { background-color: #0b0b0b; }
-  50%  { background-color: #102b10; } /* subtle green tint */
-  100% { background-color: #0b0b0b; }
-}
-body.success-flash {
-  animation: bgPulse 2.5s ease-in-out infinite;
-}
-
   </style>
 
   <!-- BEGIN COMBO DATA (one per line, exactly four colours, left→right) -->
@@ -316,7 +313,6 @@ z = Math.min(maxZoom, Math.max(1, z));
 document.documentElement.style.setProperty('--results-zoom', z.toFixed(2));
 
 // --- Background pulse when exactly one match remains ---
-document.body.classList.toggle('success-flash', unique.length === 1);
       countEl.textContent = `${unique.length} match${unique.length === 1 ? "" : "es"}`;
       rowsWrap.innerHTML = "";
       exactPanel.style.display = "none";
@@ -335,6 +331,9 @@ document.body.classList.toggle('success-flash', unique.length === 1);
       for (const i of unique) {
         const card = document.createElement("div");
         card.className = "card";
+         if (unique.length === 1) {
+    card.classList.add("pulse");   // <-- make the only card pulse
+  }
 
         const left = document.createElement("div");
         left.className = "combo";
