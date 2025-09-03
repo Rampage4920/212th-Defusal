@@ -1,32 +1,203 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>Joe Bombs – Wire Filter (Game Only)</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link href="styles.css" rel="stylesheet" />
-  </head>
-  <body>
-    <main class="container">
-      <h1>Wire Filter (Left → Right)</h1>
-      <p class="hint">For Garry’s Mod (Joe Bombs) gameplay only — not real-world use.</p>
+<head>
+  <meta charset="utf-8" />
+  <title>Joe Bombs – 4‑Wire Filter (Single File, Game Only)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:#0b0b0b; color:#eee; }
+    .container { max-width: 960px; margin: 0 auto; padding: 24px; }
+    h1 { margin: 0; }
+    .hint { color:#aaa; margin: 6px 0 16px; }
+    .controls { display:grid; grid-template-columns: repeat(4, minmax(160px,1fr)) auto; gap:12px; padding:12px; background:#161616; border:1px solid #262626; border-radius:12px; align-items:end; }
+    .slot { display:flex; flex-direction:column; gap:6px; }
+    select { padding:8px; border-radius:8px; border:1px solid #333; background:#1f1f1f; color:#eee; }
+    button { padding:10px 14px; border-radius:10px; background:#222; border:1px solid #333; color:#eee; cursor:pointer; }
+    .metaRow { display:flex; justify-content:space-between; align-items:center; margin-top:12px; color:#aaa; }
+    .small { font-size:12px; }
+    .results { margin-top:16px; display:grid; gap:8px; }
+    .card { padding:10px 12px; background:#161616; border:1px solid #262626; border-radius:10px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    details { margin-top: 16px; }
+    textarea { width: 100%; min-height: 140px; padding: 10px; border-radius: 10px; border:1px solid #333; background:#111; color:#eee; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  </style>
 
-      <section class="controls">
-        <div class="slot">
-          <label>First wire</label>
-          <select id="c1"></select>
-        </div>
-        <div class="slot">
-          <label>Second wire</label>
-          <select id="c2"></select>
-        </div>
-        <label class="tog"><input id="left" type="checkbox" checked /> Left-anchored</label>
-        <label class="tog"><input id="exact" type="checkbox" /> Exact length</label>
-      </section>
+  <!-- BEGIN COMBO DATA (edit lines below, one combo per line, exactly four colours) -->
+  <script id="combos" type="text/plain">
+# Example combos — replace these with your own (left → right)
+Red, Blue, Yellow, Black
+Red, Blue, Black, Yellow
+Red, Yellow, Blue, Black
+Blue, Black, Yellow, White
+Green, White, Purple, Pink
+Orange, White, Green, Black
+Purple, Yellow, Red, Blue
+Left Yellow, Black, Blue, White
+  </script>
+  <!-- END COMBO DATA -->
+</head>
+<body>
+  <main class="container">
+    <h1>4‑Wire Filter</h1>
+    <p class="hint">For GMod (Joe Bombs) gameplay only — not for real‑world use.</p>
 
-      <section id="results" class="results"></section>
-    </main>
+    <section class="controls">
+      <div class="slot"><label>Wire 1</label><select id="w1"></select></div>
+      <div class="slot"><label>Wire 2</label><select id="w2"></select></div>
+      <div class="slot"><label>Wire 3</label><select id="w3"></select></div>
+      <div class="slot"><label>Wire 4</label><select id="w4"></select></div>
+      <button id="clear">Clear</button>
+    </section>
 
-    <script src="app.js"></script>
-  </body>
+    <div class="metaRow">
+      <div id="count">0 combos</div>
+      <div class="small">Edit the “COMBO DATA” block at the top of this file.</div>
+    </div>
+
+    <section id="results" class="results"></section>
+
+    <details>
+      <summary>Paste combos (optional, live preview only)</summary>
+      <p class="small">Paste four-colour combos (one per line). Click “Load pasted”. This won’t save—edit the COMBO DATA block above to persist.</p>
+      <textarea id="pasteArea" placeholder="e.g.&#10;Red, Blue, Yellow, Black&#10;Blue, Black, Yellow, White"></textarea>
+      <div style="margin-top:8px; display:flex; gap:8px;">
+        <button id="loadPasted">Load pasted</button>
+        <button id="resetData">Reset to embedded data</button>
+      </div>
+    </details>
+  </main>
+
+  <script>
+    // Base palette; will auto-extend with any colours found in combos
+    const BASE_PALETTE = ["", "Red","Blue","Yellow","Black","Orange","White","Green","Purple","Pink","Grey","Brown"];
+    const selects = [ "w1","w2","w3","w4" ].map(id => document.getElementById(id));
+    const results = document.getElementById("results");
+    const countEl = document.getElementById("count");
+    const clearBtn = document.getElementById("clear");
+    const pasteArea = document.getElementById("pasteArea");
+    const loadPastedBtn = document.getElementById("loadPasted");
+    const resetDataBtn = document.getElementById("resetData");
+
+    const norm = s => (s||"").trim().toLowerCase();
+    const titleCase = s => s.replace(/\w\S*/g, t => t[0].toUpperCase() + t.slice(1).toLowerCase());
+
+    let combos = [];
+    let palette = [...BASE_PALETTE];
+
+    function parseCombos(text) {
+      return text
+        .split(/\r?\n/)
+        .map(l => l.trim())
+        .filter(l => l && !l.startsWith('#'))
+        .map(l => l.split(',').map(x => titleCase(x.trim())))
+        .filter(parts => parts.length === 4);
+    }
+
+    function buildPaletteFromCombos(list) {
+      const set = new Set(BASE_PALETTE);
+      for (const row of list) for (const c of row) set.add(c);
+      // Ensure empty option is first
+      const arr = Array.from(set).filter(v => v !== "");
+      arr.sort((a,b) => a.localeCompare(b)); // alphabetical for neatness
+      return ["", ...arr];
+    }
+
+    function populateSelect(sel, values) {
+      sel.innerHTML = "";
+      for (const v of values) {
+        const opt = document.createElement("option");
+        opt.value = v;
+        opt.textContent = v || "— any —";
+        sel.appendChild(opt);
+      }
+    }
+
+    function getSelections() {
+      return selects.map(s => s.value);
+    }
+
+    function filteredCombos(selections) {
+      return combos.filter(row => selections.every((v, idx) => !v || norm(v) === norm(row[idx])));
+    }
+
+    function allowedByIndex(selections, index) {
+      const otherSel = selections.map((v, i) => (i === index ? "" : v));
+      const rows = filteredCombos(otherSel);
+      const set = new Set(rows.map(r => r[index]));
+      return Array.from(set);
+    }
+
+    function refreshOptions() {
+      const sel = getSelections();
+      for (let i = 0; i < selects.length; i++) {
+        const allowed = new Set(allowedByIndex(sel, i));
+        const current = selects[i].value;
+        const ordered = palette.filter(v => v === "" || allowed.has(v));
+        populateSelect(selects[i], ordered);
+        if (current && allowed.has(current)) {
+          selects[i].value = current;
+        } else {
+          selects[i].value = "";
+        }
+      }
+    }
+
+    function render() {
+      const sel = getSelections();
+      const rows = filteredCombos(sel);
+      countEl.textContent = `${rows.length} combo${rows.length === 1 ? "" : "s"}`;
+      results.innerHTML = "";
+      for (const r of rows) {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.textContent = `${r[0]} | ${r[1]} | ${r[2]} | ${r[3]}`;
+        results.appendChild(card);
+      }
+    }
+
+    function onChange() {
+      refreshOptions();
+      render();
+    }
+
+    function clearSelections() {
+      for (const s of selects) s.value = "";
+      refreshOptions();
+      render();
+    }
+
+    function loadEmbedded() {
+      const embedded = document.getElementById("combos").textContent || "";
+      combos = parseCombos(embedded);
+      palette = buildPaletteFromCombos(combos);
+      for (const sel of selects) populateSelect(sel, palette);
+      refreshOptions();
+      render();
+    }
+
+    // Init
+    for (const sel of selects) populateSelect(sel, palette);
+    for (const sel of selects) sel.addEventListener("change", onChange);
+    clearBtn.addEventListener("click", (e) => { e.preventDefault(); clearSelections(); });
+
+    loadPastedBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      const txt = pasteArea.value || "";
+      combos = parseCombos(txt);
+      palette = buildPaletteFromCombos(combos);
+      for (const sel of selects) populateSelect(sel, palette);
+      refreshOptions();
+      render();
+    });
+
+    resetDataBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      pasteArea.value = "";
+      loadEmbedded();
+    });
+
+    // first load
+    loadEmbedded();
+  </script>
+</body>
 </html>
