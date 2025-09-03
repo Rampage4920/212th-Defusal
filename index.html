@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>4‑Wire Combo → Defusal (Single File, Game Only)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:#0b0b0b; color:#eee; }
+    .container { max-width: 980px; margin: 0 auto; padding: 24px; }
+    h1 { margin: 0 0 6px; }
+    .hint { color:#aaa; margin: 0 0 14px; }
+    .controls { display:grid; grid-template-columns: repeat(4, minmax(160px,1fr)) auto; gap:10px; padding:12px; background:#161616; border:1px solid #262626; border-radius:12px; align-items:end; }
+    .slot { display:flex; flex-direction:column; gap:6px; }
+    select { padding:8px; border-radius:8px; border:1px solid #333; background:#1f1f1f; color:#eee; }
+    button { padding:10px 14px; border-radius:10px; background:#222; border:1px solid #333; color:#eee; cursor:pointer; }
+    .metaRow { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:10px; color:#aaa; }
+    .badge { display:inline-block; padding:2px 8px; border:1px solid #333; background:#1f1f1f; border-radius:999px; }
+    .results { margin-top:14px; display:grid; gap:8px; }
+    .listHead, .card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content; /* left grows, right fits content */
+  align-items: center;
+  gap: 4px;                 /* smaller gap between combo and defusal */
+  padding: 8px 12px;
+  border-radius: 10px;
+}
+    .listHead { color:#bbb; }
+    .card { background:#161616; border:1px solid #262626; }
+    .combo {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  display: inline-flex;
+  flex-wrap: nowrap;        /* no wrapping between chips */
+  gap: 4px;                 /* slightly tighter chip spacing */
+  white-space: nowrap;      /* keep the entire combo on one line */
+}
+    .chip { padding:2px 8px; border-radius:999px; border:1px solid #333; background:#1f1f1f; }
+    .out { color:#cde3ff; white-space:nowrap; }
+    .panel { margin-top: 14px; padding: 10px 12px; background:#101010; border:1px solid #2a2a2a; border-radius:12px; }
+    .panel strong { margin-right: 6px; }
+    /* Small tweak to bring the two columns closer together */
+    .listHead, .card { gap: 8px; }
+  </style>
+
+  <!-- BEGIN COMBO DATA (one per line, exactly four colours, left→right) -->
+  <script id="combos" type="text/plain">
+# Replace with your combos in order (left → right)
+Blue, Green, Yellow, Red
+Green, Yellow, Yellow, Black
+Yellow, Orange, Blue, Yellow
+Blue, White, Red, Black
+Green, Orange, Black, Yellow
+Green, Yellow, Red, White
+Blue, Green, Purple, Pink
+Brown, Orange, Yellow, White
+Red, Purple, Black, Yellow
+Grey, White, Blue, Black
+Green, Yellow, Orange, Blue
+Purple, Red, Pink, White
+Blue, Yellow, Grey, Red
+Orange, Pink, Green, Grey
+Black, Brown, White, Green
+Red, Purple, Yellow, Grey
+Blue, Green, Yellow, Red
+Green, Yellow, Yellow, Black
+Yellow, Orange, Blue, Yellow
+White, Blue, Red, Black
+Green, Orange, Black, Yellow
+Green, Yellow, Red, White
+Blue, Green, Purple, Pink
+Brown, Orange, Yellow, White
+Red, Purple, Black, Yellow
+Grey, White, Blue, Black
+Green, Yellow, Orange, Blue
+Purple, Red, Pink, White
+Blue, Yellow, Grey, Red
+Orange, Pink, Green, Grey
+Black, Brown, White, Green
+Red, Purple, Yellow, Grey
+  </script>
+  <!-- END COMBO DATA -->
+
+  <!-- BEGIN OUTPUT DATA (one per line; line N maps to combo line N) -->
+  <script id="outputs" type="text/plain">
+Red, Blue
+Left Yellow, Black
+Orange, Blue
+Blue
+Green, Black, Yellow
+Red
+Green, Blue
+Orange, White
+Purple, Red
+White, Black
+Green, Yellow
+Red, Pink
+Yellow, Blue
+Pink, Grey
+Brown, Black
+Purple, Yellow, Red
+Red, Blue
+Left Yellow, Black
+Orange, Blue
+Blue
+Green, Black, Yellow
+Red
+Green, Blue
+Orange, White
+Purple, Red
+White, Black
+Green, Yellow
+Red, Pink
+Yellow, Blue
+Pink, Grey
+Brown, Black
+Purple, Yellow, Red
+  </script>
+  <!-- END OUTPUT DATA -->
+</head>
+<body>
+  <main class="container">
+    <h1>4‑Wire Combo → Defusal</h1>
+    <p class="hint">For Garry’s Mod gameplay only — not for real‑world use.</p>
+
+    <section class="controls">
+      <div class="slot"><label>Wire 1</label><select id="w1"></select></div>
+      <div class="slot"><label>Wire 2</label><select id="w2"></select></div>
+      <div class="slot"><label>Wire 3</label><select id="w3"></select></div>
+      <div class="slot"><label>Wire 4</label><select id="w4"></select></div>
+      <button id="clear">Clear</button>
+    </section>
+
+    <div class="metaRow">
+      <div id="count" class="badge">0 matches</div>
+      <div id="status" class="badge"></div>
+    </div>
+
+    <div class="results">
+      <div class="listHead">
+        <div>Wire Combo</div>
+        <div>Defusal</div>
+      </div>
+      <div id="rows"></div>
+    </div>
+
+    <div id="exactPanel" class="panel" style="display:none;">
+      <div><strong>Exact match:</strong> <span id="exactCombo"></span></div>
+      <div><strong>Defusal:</strong> <span id="exactOutput" class="out"></span></div>
+    </div>
+  </main>
+
+  <script>
+    // Base palette; extended by any colours discovered in the combos
+    const BASE_PALETTE = ["", "Red","Blue","Yellow","Black","Orange","White","Green","Purple","Pink","Grey","Brown","Left Yellow"];
+    const selects = ["w1","w2","w3","w4"].map(id => document.getElementById(id));
+    const clearBtn = document.getElementById("clear");
+    const rowsWrap = document.getElementById("rows");
+    const countEl = document.getElementById("count");
+    const statusEl = document.getElementById("status");
+    const exactPanel = document.getElementById("exactPanel");
+    const exactCombo = document.getElementById("exactCombo");
+    const exactOutput = document.getElementById("exactOutput");
+
+    const norm = s => (s||"").trim().toLowerCase();
+    const titleCase = s => s.replace(/\w\S*/g, t => t[0].toUpperCase() + t.slice(1).toLowerCase());
+
+    // Color mapping for wire text
+    const COLOR_MAP = {
+      "red":"#ff4b4b",
+      "blue":"#3ea0ff",
+      "yellow":"#ffd84a",
+      "black":"#d0d0d0",
+      "orange":"#ffa14a",
+      "white":"#ffffff",
+      "green":"#50d074",
+      "purple":"#c58cff",
+      "pink":"#ff94c2",
+      "grey":"#9a9a9a",
+      "gray":"#9a9a9a",
+      "brown":"#b47a4d",
+      "left yellow":"#ffd84a"
+    };
+
+    let combos = [];   // [[c1,c2,c3,c4], ...]
+    let outputs = [];  // ["string", ...]
+    let palette = [...BASE_PALETTE];
+
+    function parseCombos(text) {
+      return text
+        .split(/\r?\n/)
+        .map(l => l.trim())
+        .filter(l => l && !l.startsWith('#'))
+        .map(l => l.split(',').map(x => titleCase(x.trim())))
+        .filter(parts => parts.length === 4);
+    }
+
+    function parseOutputs(text) {
+      return text
+        .split(/\r?\n/)
+        .map(l => l.trim())
+        .filter(l => l && !l.startsWith('#'));
+    }
+
+    function buildPaletteFromCombos(list) {
+      const set = new Set(BASE_PALETTE);
+      for (const row of list) for (const c of row) set.add(c);
+      const arr = Array.from(set).filter(v => v !== "");
+      arr.sort((a,b) => a.localeCompare(b));
+      return ["", ...arr];
+    }
+
+    function populateSelect(sel, values) {
+      sel.innerHTML = "";
+      for (const v of values) {
+        const opt = document.createElement("option");
+        opt.value = v;
+        opt.textContent = v || "— any —";
+        sel.appendChild(opt);
+      }
+    }
+
+    function getSelections() { return selects.map(s => s.value); }
+
+    function filteredIndexes(selections) {
+      // Return indexes of combos matching current selections (wildcards allowed)
+      const idxs = [];
+      for (let i = 0; i < combos.length; i++) {
+        const row = combos[i];
+        const ok = selections.every((v, idx) => !v || norm(v) === norm(row[idx]));
+        if (ok) idxs.push(i);
+      }
+      return idxs;
+    }
+
+    function allowedByIndex(selections, index) {
+      const otherSel = selections.map((v, i) => (i === index ? "" : v));
+      const idxs = filteredIndexes(otherSel);
+      const set = new Set(idxs.map(i => combos[i][index]));
+      return Array.from(set);
+    }
+
+    function refreshOptions() {
+      const sel = getSelections();
+      for (let i = 0; i < selects.length; i++) {
+        const allowed = new Set(allowedByIndex(sel, i));
+        const current = selects[i].value;
+        const ordered = palette.filter(v => v === "" || allowed.has(v));
+        populateSelect(selects[i], ordered);
+        if (current && allowed.has(current)) selects[i].value = current; else selects[i].value = "";
+      }
+    }
+
+    function colorSpan(text) {
+      const key = norm(text);
+      const color = COLOR_MAP[key] || "#ddd";
+      const span = document.createElement("span");
+      span.className = "chip";
+      span.style.color = color;
+      span.textContent = text;
+      return span;
+    }
+
+    function render() {
+      const sel = getSelections();
+      const idxs = filteredIndexes(sel);
+
+      // Deduplicate by combo (normalize key)
+      const seen = new Set();
+      const unique = [];
+      for (const i of idxs) {
+        const key = combos[i].map(v => norm(v)).join("|");
+        if (!seen.has(key)) {
+          seen.add(key);
+          unique.push(i);
+        }
+      }
+
+      countEl.textContent = `${unique.length} match${unique.length === 1 ? "" : "es"}`;
+      rowsWrap.innerHTML = "";
+      exactPanel.style.display = "none";
+
+      // Status about alignment
+      if (outputs.length === combos.length) {
+        statusEl.className = "badge";
+        statusEl.style.color = "#9ff3aa";
+        statusEl.textContent = "data OK";
+      } else {
+        statusEl.className = "badge";
+        statusEl.style.color = "#ffd58a";
+        statusEl.textContent = `mismatch: ${outputs.length} outputs for ${combos.length} combos`;
+      }
+
+      for (const i of unique) {
+        const card = document.createElement("div");
+        card.className = "card";
+
+        const left = document.createElement("div");
+        left.className = "combo";
+        for (const token of combos[i]) left.appendChild(colorSpan(token));
+
+        const right = document.createElement("div");
+        right.className = "out";
+        right.textContent = outputs[i] ?? "(no output)";
+
+        card.appendChild(left);
+        card.appendChild(right);
+        rowsWrap.appendChild(card);
+      }
+
+      // Exact-match emphasis if all 4 selected
+      const allChosen = sel.every(Boolean);
+      if (allChosen) {
+        // Find the first exact index among idxs
+        let exactIdx = -1;
+        for (const i of idxs) {
+          const row = combos[i];
+          if (row.every((v, k) => norm(v) === norm(sel[k]))) { exactIdx = i; break; }
+        }
+        if (exactIdx !== -1) {
+          exactCombo.innerHTML = "";
+          for (const token of combos[exactIdx]) exactCombo.appendChild(colorSpan(token));
+          exactOutput.textContent = outputs[exactIdx] ?? "(no output)";
+          exactPanel.style.display = "block";
+        }
+      }
+    }
+
+    function onChange() { refreshOptions(); render(); }
+    function clearSelections() { for (const s of selects) s.value = ""; refreshOptions(); render(); }
+
+    function loadEmbedded() {
+      const comboText = document.getElementById("combos").textContent || "";
+      const outputText = document.getElementById("outputs").textContent || "";
+      combos = parseCombos(comboText);
+      outputs = parseOutputs(outputText);
+      palette = buildPaletteFromCombos(combos);
+      for (const sel of selects) populateSelect(sel, palette);
+      refreshOptions(); render();
+    }
+
+    // Init
+    for (const sel of selects) populateSelect(sel, palette);
+    for (const sel of selects) sel.addEventListener("change", onChange);
+    clearBtn.addEventListener("click", (e) => { e.preventDefault(); clearSelections(); });
+    loadEmbedded();
+  </script>
+</body>
+</html>
